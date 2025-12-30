@@ -164,6 +164,15 @@ Secure file format design
 
 Professional error handling
 
+
+Author
+
+Freemen Houngbedji
+
+    GitHub: @FreemenTech
+
+    Project: CryptoBox
+
 📜 License
 
 MIT License — free to use, modify, and distribute.
