@@ -1,178 +1,134 @@
-🔐 CryptoBox
+# 🔐 CryptoBox v2.0
 
-CryptoBox is a Python CLI tool designed to securely encrypt and decrypt files, with the user placed at the center of the security process.
+Secure file encryption CLI tool built with modern, audited cryptographic primitives.
 
-The project relies exclusively on modern, industry-standard cryptographic primitives, with a clean architecture, strong error handling, and a simple but professional command-line interface.
+CryptoBox gives you two ways to encrypt files — a password you remember, or a random AES key protected by a password — with zero compromise on security.
 
-✨ Features
+## Features
 
-🔒 Password-based file encryption
+- **AES-256-GCM** authenticated encryption (AEAD)
+- **PBKDF2-HMAC-SHA256** key derivation (600,000 iterations, OWASP 2023)
+- **AAD-protected headers** — magic bytes, salt, and nonce are tamper-proof
+- **Two interfaces** — interactive menu for humans, scriptable CLI for automation
+- **Format detection** — wrong decryption mode is caught with a clear message
+- **Safe failure** — partial outputs are cleaned up, no silent corruption
 
-Secure key derivation using PBKDF2-HMAC-SHA256
+## Quick Start
 
-Authenticated encryption with AES-256-GCM
+```bash
+pip install cryptography rich typer
+```
 
-🔑 AES file encryption with password-protected key
+### CLI Mode
 
-Random AES key generation
+```bash
+# Encrypt with password
+python main.py encrypt password secret.txt secret.enc
 
-AES key encrypted using a password
+# Decrypt with password
+python main.py decrypt password secret.enc secret.txt
 
-🧾 Structured encrypted file format
+# Encrypt with AES key (key protected by password)
+python main.py encrypt aes secret.txt secret.enc --key-name mykey
 
-Magic header to detect encryption mode
+# Decrypt with AES key
+python main.py decrypt aes secret.enc secret.txt --key-name mykey
 
-Embedded salt and nonce for safe decryption
+# Show help
+python main.py --help
+python main.py encrypt --help
+```
 
-🛡️ Integrity & authenticity
+### Interactive Menu
 
-Automatic detection of wrong password or corrupted files
+```bash
+python main.py menu
+```
 
-🚫 Safe failure
+## Encryption Modes
 
-Clear, user-friendly error messages
+### 1 — Password-Based (CBX1)
 
-No silent corruption or partial decryption
+A key is derived from your password. Simple, portable, ideal for personal file protection.
 
-🧑‍💻 Beginner-friendly, professional-grade
+```
+File format: [CBX1 (4B)] [SALT (16B)] [NONCE (12B)] [CIPHERTEXT + GCM TAG]
+AAD scope:   CBX1 + SALT + NONCE (32 bytes)
+```
 
-Simple CLI for non-technical users
+### 2 — AES Key + Password (CBX2)
 
-Clean internal design suitable for code review
+A random AES-256 key encrypts the file. The key itself is encrypted with your password and saved as a `.enc` file. Better for workflows where the same key encrypts multiple files.
 
-🔐 Cryptography Overview
+```
+File format: [CBX2 (4B)] [NONCE (12B)] [CIPHERTEXT + GCM TAG]
+AAD scope:   CBX2 + NONCE (16 bytes)
 
-CryptoBox follows best practices used in real-world systems:
+Key file:    Uses CBX1 format (password-protected)
+```
 
-Component	Algorithm
-Key derivation	PBKDF2-HMAC-SHA256 (300,000 iterations)
-Symmetric encryption	AES-256-GCM
-Randomness	OS-level secure RNG
-Authentication	Built-in AEAD (GCM)
+## Cryptography Overview
 
-❗ No insecure algorithms, no custom crypto.
+| Component          | Algorithm / Parameter          |
+|--------------------|--------------------------------|
+| Key derivation     | PBKDF2-HMAC-SHA256 (600,000 iterations) |
+| Symmetric cipher   | AES-256-GCM                    |
+| Authentication     | GCM built-in AEAD + AAD on headers |
+| Randomness         | `os.urandom` (OS-level CSPRNG) |
+| Nonce size         | 96 bits (GCM standard)         |
+| Salt size          | 128 bits                       |
 
-📂 Encryption Modes
-1️⃣ Password-Based Encryption
+No insecure algorithms. No custom crypto.
 
-A key is derived from the user’s password using PBKDF2
+## Security Properties
 
-The file is encrypted with AES-256-GCM
+- **Keys never touch disk in plaintext** — AES keys are encrypted directly in memory before writing
+- **Authenticated metadata** — AAD covers the full header, preventing silent tampering
+- **Format-aware decryption** — using the wrong mode gives a clear error, not garbage output
+- **Correct minimum size validation** — accounts for nonce + GCM tag, preventing crashes on truncated files
+- **Password handling** — hidden input (getpass), confirmation on encrypt, minimum length enforced
+- **Partial output cleanup** — failed operations remove incomplete files
+- **Restrictive permissions** — key files get `chmod 600` on Unix systems
+- **File size limit** — 2 GB cap prevents out-of-memory crashes
 
-Encrypted file contains:
+## Known Limitations
 
-MAGIC | SALT | NONCE | CIPHERTEXT
+- **No streaming** — files are loaded entirely into memory (2 GB limit mitigates OOM)
+- **No secure memory wiping** — Python's garbage collector may copy sensitive data; this is a language-level limitation
+- **PBKDF2 vs Argon2** — Argon2id would be stronger against GPU attacks, but PBKDF2 at 600k iterations remains solid and avoids an extra dependency
 
+## Project Structure
 
-✔ Simple
-✔ Portable
-✔ Ideal for personal file protection
+```
+cryptobox/
+├── main.py            Entry point
+├── cli.py             Typer CLI (scriptable)
+├── interactive.py     Menu-based interface
+├── crypto_engine.py   All cryptographic operations
+├── constants.py       Parameters and format specs
+└── requirements.txt
+```
 
-2️⃣ AES Encryption with Password-Protected Key
+## Dependencies
 
-A random AES-256 key is generated
+- Python 3.10+
+- `cryptography` — audited crypto primitives
+- `rich` — terminal formatting
+- `typer` — CLI framework
 
-The file is encrypted using this AES key
+## Possible Improvements
 
-The AES key itself is encrypted using a password
+- Argon2id key derivation
+- File streaming for large files
+- RSA-protected AES keys
+- Cross-platform packaging (PyPI)
+- Automated test suite
 
-✔ Separation of data & key
-✔ Better for larger workflows
-✔ Suitable for reuse and automation
+## Author
 
-🖥️ Command Line Interface
+**Freemen Houngbedji**
+GitHub: [@FreemenTech](https://github.com/FreemenTech)
 
-CryptoBox provides an interactive CLI with:
-
-Clear menus
-
-Input validation
-
-File existence checks
-
-Safe overwrite prevention
-
-Colored output using Rich
-
-Example:
-
-python main.py
-
-⚠️ Error Handling
-
-CryptoBox safely handles:
-
-Wrong passwords
-
-Corrupted or truncated files
-
-Invalid encryption formats
-
-Missing or inaccessible files
-
-Permission issues
-
-All cryptographic failures are detected and reported, never ignored.
-
-📦 Dependencies
-
-Python 3.9+
-
-cryptography
-
-rich
-
-Install dependencies:
-
-pip install cryptography rich
-
-🎯 Project Scope & Level
-
-This project is designed as:
-
-✅ A solid end-of-beginner cryptography project
-
-✅ A GitHub-ready portfolio tool
-
-✅ A foundation for more advanced crypto systems
-
-It intentionally avoids over-engineering while respecting professional security standards.
-
-🚀 Possible Improvements
-
-RSA-protected AES keys
-
-Metadata signing
-
-File streaming (large files)
-
-Cross-platform packaging
-
-Automated tests
-
-🧠 Educational Value
-
-CryptoBox demonstrates:
-
-Proper password-based encryption
-
-Safe key management principles
-
-AEAD usage
-
-Secure file format design
-
-Professional error handling
-
-
-Author
-
-Freemen Houngbedji
-
-    GitHub: @FreemenTech
-
-    Project: CryptoBox
-
-📜 License
+## License
 
 MIT License — free to use, modify, and distribute.
